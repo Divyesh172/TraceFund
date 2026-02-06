@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Generator - Trace Fund</title>
+    <link rel="stylesheet" href="certificate-styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Left Side - Form -->
+        <div class="form-section">
+            <div class="form-header">
+                <h1>🎖️ Certificate Generator</h1>
+                <p>Generate a donation certificate for contributors</p>
+            </div>
+
+            <form id="certificateForm">
+                <div class="form-group">
+                    <label for="donorName">Donor Name *</label>
+                    <input 
+                        type="text" 
+                        id="donorName" 
+                        placeholder="Arnold Smith" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="donationAmount">Donation Amount ($) *</label>
+                    <input 
+                        type="number" 
+                        id="donationAmount" 
+                        placeholder="700" 
+                        min="1"
+                        step="0.01"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="campaignName">Campaign/Program Name *</label>
+                    <input 
+                        type="text" 
+                        id="campaignName" 
+                        placeholder="Community Outreach Programs" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="organizationName">Organization Name</label>
+                    <input 
+                        type="text" 
+                        id="organizationName" 
+                        placeholder="Progress Foundation" 
+                        value="Trace Fund"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="donationDate">Donation Date *</label>
+                    <input 
+                        type="date" 
+                        id="donationDate" 
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="generate-btn">
+                    <span>✨</span> Generate Certificate
+                </button>
+
+                <button type="button" class="download-btn" id="downloadBtn" style="display: none;">
+                    <span>📥</span> Download Certificate
+                </button>
+            </form>
+        </div>
+
+        <!-- Right Side - Preview -->
+        <div class="preview-section">
+            <div class="preview-header">
+                <h3>Certificate Preview</h3>
+                <p>Live preview of your certificate</p>
+            </div>
+
+            <!-- Certificate Canvas -->
+            <div id="certificatePreview" class="certificate-preview">
+                <canvas id="certificateCanvas" width="1200" height="850"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="certificate-scripts.js"></script>
+</body>
+</html>
