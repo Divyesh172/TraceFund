@@ -1,0 +1,28 @@
+# --- GLOBAL IGNORES ---
+.DS_Store
+.vscode
+.idea
+.git
+.gitmodules
+
+# --- FRONTEND IGNORES ---
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.env.local
+frontend/.env
+
+# --- BACKEND IGNORES (Security Critical) ---
+backend/target/
+backend/node_modules/
+backend/**/*.json
+!backend/package.json
+!backend/tsconfig.json
+!backend/app/utils/idl.json
+
+# --- WALLET SECURITY (The most important part) ---
+# Blocks any keypair files from ever being uploaded
+**/*-keypair.json
+**/*.key
+id.json
