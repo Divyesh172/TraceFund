@@ -53,28 +53,22 @@ Bash
 cd backend/trace_fund_backend
 Install dependencies:
 
-Bash
 npm install
 Build the Anchor program:
 
-Bash
 anchor build
 Deploy to Solana Devnet:
 
-Bash
 anchor deploy
 Frontend Setup (Web App)
 Navigate to the frontend directory:
 
-Bash
 cd frontend/trace_fund_frontend/trace-fund-frontend
 Install dependencies:
 
-Bash
 npm install
 Run the development server:
 
-Bash
 npm run dev
 Open http://localhost:3000 in your browser.
 
