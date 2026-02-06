@@ -1,106 +1,132 @@
 "use client";
 
-import { useRef, useState } from "react";
-import html2canvas from "html2canvas";
+import { useEffect, useRef } from "react";
 
 interface DonationSuccessModalProps {
     isOpen: boolean;
     onClose: () => void;
-    amount: string;
+    amount: number;
     campaignName: string;
-    donorAddress: string;
-    txSignature: string;
 }
 
 export default function DonationSuccessModal({
-                                                 isOpen, onClose, amount, campaignName, donorAddress, txSignature
+                                                 isOpen,
+                                                 onClose,
+                                                 amount,
+                                                 campaignName
                                              }: DonationSuccessModalProps) {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    const certificateRef = useRef<HTMLDivElement>(null);
-    const [isDownloading, setIsDownloading] = useState(false);
+    useEffect(() => {
+        if (isOpen && canvasRef.current) {
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return;
 
-    if (!isOpen) return null;
+            // 1. Background
+            ctx.fillStyle = '#111827';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const downloadCertificate = async () => {
-        if (!certificateRef.current) return;
-        setIsDownloading(true);
+            // 2. Green Waves
+            const g = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            g.addColorStop(0, '#16a34a'); // Green 600
+            g.addColorStop(1, '#22c55e'); // Green 500
 
-        try {
-            // Magic: Convert the HTML div to an Image
-            const canvas = await html2canvas(certificateRef.current, {
-                backgroundColor: "#000000", // Ensure background is captured
-                scale: 2, // High resolution for Retina displays
-            });
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(canvas.width, 0);
+            ctx.lineTo(canvas.width, 60);
+            ctx.bezierCurveTo(canvas.width * 0.75, 40, canvas.width * 0.25, 80, 0, 60);
+            ctx.fill();
 
-            const image = canvas.toDataURL("image/png");
-            const link = document.createElement("a");
-            link.href = image;
-            link.download = `TraceFund-Certificate-${txSignature.slice(0, 8)}.png`;
-            link.click();
-        } catch (err) {
-            console.error("Failed to generate image", err);
-        } finally {
-            setIsDownloading(false);
+            // Bottom Wave
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.lineTo(canvas.width, canvas.height - 40);
+            ctx.bezierCurveTo(canvas.width * 0.75, canvas.height - 60, canvas.width * 0.25, canvas.height - 20, 0, canvas.height - 40);
+            ctx.fill();
+
+            // 3. Text
+            ctx.textAlign = 'center';
+
+            // Brand
+            ctx.fillStyle = '#4ade80';
+            ctx.font = 'bold 24px monospace';
+            ctx.fillText('TRACEFUND 🔍', canvas.width / 2, 110);
+
+            // Title
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 42px sans-serif';
+            ctx.fillText('Certificate of Impact', canvas.width / 2, 170);
+
+            // Details
+            ctx.font = 'italic 28px serif';
+            ctx.fillStyle = '#9ca3af';
+            ctx.fillText(`Presented for supporting`, canvas.width / 2, 230);
+
+            ctx.font = 'bold 32px sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(`"${campaignName}"`, canvas.width / 2, 270);
+
+            // Amount
+            ctx.font = 'bold 48px monospace';
+            ctx.fillStyle = '#4ade80';
+            ctx.fillText(`${amount} SOL`, canvas.width / 2, 340);
+
+            // Footer
+            ctx.font = '14px monospace';
+            ctx.fillStyle = '#4b5563';
+            const date = new Date().toLocaleDateString();
+            ctx.fillText(`Verified on Solana • ${date}`, canvas.width / 2, 420);
         }
+    }, [isOpen, amount, campaignName]);
+
+    const downloadCertificate = () => {
+        if (!canvasRef.current) return;
+        const link = document.createElement('a');
+        link.download = `TraceFund_Proof_${Date.now()}.png`;
+        link.href = canvasRef.current.toDataURL();
+        link.click();
     };
 
+    // If not open, return nothing (Standard React pattern)
+    if (!isOpen) return null;
+
     return (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-6 max-w-2xl w-full">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dark Overlay */}
+            <div
+                className="fixed inset-0 bg-black/90 backdrop-blur-sm"
+                onClick={onClose}
+            />
 
-                {/* --- THE CERTIFICATE (This is what gets downloaded) --- */}
-                <div
-                    ref={certificateRef}
-                    className="bg-gray-900 border-4 border-double border-green-600/50 p-10 rounded-xl text-center shadow-2xl w-full relative overflow-hidden"
-                    style={{ backgroundImage: "radial-gradient(circle at center, #111827 0%, #000000 100%)" }}
+            {/* Modal Content */}
+            <div className="relative w-full max-w-xl rounded-2xl bg-black border border-green-500/30 p-6 shadow-2xl shadow-green-900/20 animate-in fade-in zoom-in duration-200">
+
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-white">
+                        🎉 Contribution Verified
+                    </h2>
+                    <button onClick={onClose} className="text-gray-500 hover:text-white text-2xl leading-none">
+                        &times;
+                    </button>
+                </div>
+
+                <canvas
+                    ref={canvasRef}
+                    width={600}
+                    height={450}
+                    className="w-full rounded-xl shadow-lg mb-6 border border-gray-800"
+                />
+
+                <button
+                    onClick={downloadCertificate}
+                    className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
                 >
-                    {/* Decorative Background Elements */}
-                    <div className="absolute top-0 left-0 w-32 h-32 border-t-4 border-l-4 border-green-500/20 rounded-tl-3xl m-4"></div>
-                    <div className="absolute bottom-0 right-0 w-32 h-32 border-b-4 border-r-4 border-green-500/20 rounded-br-3xl m-4"></div>
-
-                    <div className="mb-2 uppercase tracking-[0.3em] text-green-500 text-sm font-bold">TraceFund Blockchain Verified</div>
-
-                    <h1 className="text-4xl md:text-5xl font-serif text-white mb-8 mt-4 tracking-wide">Certificate of Impact</h1>
-
-                    <p className="text-gray-400 text-lg mb-2">This is to certify that</p>
-                    <h2 className="text-2xl font-mono text-green-400 font-bold mb-6 truncate max-w-md mx-auto">{donorAddress}</h2>
-
-                    <p className="text-gray-400 text-lg mb-2">Has successfully donated</p>
-                    <div className="text-5xl font-bold text-white mb-6 drop-shadow-lg">{amount} SOL</div>
-
-                    <p className="text-gray-400 text-lg mb-6">To the campaign</p>
-                    <h3 className="text-2xl text-white font-bold mb-8 italic">"{campaignName}"</h3>
-
-                    <div className="border-t border-gray-700 pt-6 flex justify-between items-end text-xs text-gray-500 font-mono">
-                        <div className="text-left">
-                            <div>DATE: {new Date().toLocaleDateString()}</div>
-                            <div>SIG: {txSignature.slice(0, 12)}...</div>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-green-600 font-bold text-lg">TraceFund ✅</div>
-                            <div>Immutable Proof</div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* --- ACTIONS --- */}
-                <div className="flex gap-4">
-                    <button
-                        onClick={downloadCertificate}
-                        disabled={isDownloading}
-                        className="bg-green-600 hover:bg-green-500 text-black font-bold py-3 px-8 rounded-full transition-all flex items-center gap-2 transform hover:scale-105"
-                    >
-                        {isDownloading ? "Generating..." : "📸 Download & Share"}
-                    </button>
-
-                    <button
-                        onClick={onClose}
-                        className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-full transition-all"
-                    >
-                        Close
-                    </button>
-                </div>
-
+                    📥 Download Proof
+                </button>
             </div>
         </div>
     );

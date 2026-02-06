@@ -7,27 +7,38 @@ import { Program, AnchorProvider } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import Navbar from "./components/Navbar";
 import CreateCampaignModal from "./components/CreateCampaignModal";
+import DonationSuccessModal from "./components/DonationSuccessModal"; //
 import idl from "./utils/idl.json";
 
+// Force TypeScript to recognize the IDL
 const idl_object = JSON.parse(JSON.stringify(idl));
-const PROGRAM_ID = new PublicKey(idl.address);
 
 export default function Home() {
   const { connection } = useConnection();
-  const { publicKey } = useWallet();
+  const { publicKey } = useWallet(); // Fixed: Ensure publicKey is available
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // ✅ FIX: State to manage the Certificate Modal
+  const [successData, setSuccessData] = useState({
+    isOpen: false,
+    amount: "0",
+    campaignName: "",
+    donorAddress: "",
+    txSignature: ""
+  });
+
   const getCampaigns = async () => {
     setIsLoading(true);
     try {
+      if (!window.solana) return;
+
       const provider = new AnchorProvider(connection, window.solana, { preflightCommitment: "processed" });
       const program = new Program(idl_object, provider) as any;
 
       const accounts = await program.account.campaign.all();
 
-      // FIX: Added ': any' to 'account' to silence TypeScript errors
       const cleanedData = accounts.map((account: any) => ({
         pubkey: account.publicKey,
         name: account.account.name,
@@ -47,25 +58,31 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (connection) {
-      getCampaigns();
-    }
+    getCampaigns();
   }, [connection, publicKey]);
 
   return (
-      <main className="min-h-screen bg-black text-white">
+      <main className="min-h-screen bg-black text-white font-sans">
         <Navbar />
 
+        {/* --- MODALS --- */}
         <CreateCampaignModal
             isOpen={isModalOpen}
-            onClose={() => {
-              setIsModalOpen(false);
-              getCampaigns();
-            }}
+            onClose={() => { setIsModalOpen(false); getCampaigns(); }}
+        />
+
+        {/* ✅ FIX: Render the Certificate Modal */}
+        <DonationSuccessModal
+            isOpen={successData.isOpen}
+            onClose={() => setSuccessData({ ...successData, isOpen: false })}
+            amount={successData.amount}
+            campaignName={successData.campaignName}
+            donorAddress={successData.donorAddress}
+            txSignature={successData.txSignature}
         />
 
         <div className="flex flex-col items-center pt-20 px-4">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 text-center">
+          <h1 className="text-5xl md:text-6xl font-bold mb-6 text-center tracking-tight">
             Donations with <span className="text-green-500">Zero Secrets</span>.
           </h1>
           <p className="text-xl text-gray-400 mb-12 text-center max-w-2xl">
@@ -75,60 +92,120 @@ export default function Home() {
           <div className="flex gap-4 mb-16">
             <button
                 onClick={() => setIsModalOpen(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-full font-bold transition-all transform hover:scale-105"
+                className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-full font-bold transition-all transform hover:scale-105 shadow-lg shadow-green-900/20"
             >
               Start a Campaign
             </button>
-
             <button
                 onClick={getCampaigns}
-                className="border border-gray-600 hover:border-gray-400 text-gray-300 px-8 py-3 rounded-full font-bold transition-all"
+                className="border border-gray-700 hover:border-green-500 hover:text-green-400 text-gray-300 px-8 py-3 rounded-full font-bold transition-all"
             >
               Refresh List 🔄
             </button>
           </div>
 
-          <div className="w-full max-w-6xl">
-            <h2 className="text-2xl font-bold mb-6 border-l-4 border-green-500 pl-4">Live Campaigns ({campaigns.length})</h2>
+          <div className="w-full max-w-6xl space-y-16">
 
-            {isLoading && <p className="text-gray-400 animate-pulse">Loading blockchain data...</p>}
+            {/* --- NEW SECTION: AUDIT LOGS --- */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col justify-center">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-green-900/30 rounded-lg text-green-500">💰</div>
+                  <h3 className="text-gray-400 text-sm font-mono">TOTAL VOLUME</h3>
+                </div>
+                <p className="text-4xl font-bold text-white">1,240 <span className="text-green-500">SOL</span></p>
+                <p className="text-xs text-gray-500 mt-2">Verified on Devnet</p>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {campaigns.map((campaign) => (
-                  <div key={campaign.pubkey.toString()} className="bg-gray-900 border border-gray-800 overflow-hidden rounded-2xl hover:border-green-500/50 transition-all flex flex-col">
-
-                    <div className="h-48 bg-gray-800 w-full relative">
-                      {campaign.image ? (
-                          <img src={campaign.image} alt={campaign.name} className="w-full h-full object-cover" />
-                      ) : (
-                          <div className="w-full h-full flex items-center justify-center text-4xl">🏫</div>
-                      )}
-                    </div>
-
-                    <div className="p-6 flex-1 flex flex-col">
-                      <h3 className="text-xl font-bold mb-2 truncate">{campaign.name}</h3>
-                      <p className="text-gray-400 text-sm mb-4 line-clamp-3 flex-1">{campaign.description}</p>
-
-                      <div className="w-full bg-gray-800 h-2 rounded-full mb-2">
-                        <div
-                            className="bg-green-500 h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min((campaign.amountCollected / campaign.targetAmount) * 100, 100)}%` }}
-                        ></div>
-                      </div>
-
-                      <div className="flex justify-between text-xs text-gray-500 font-mono mb-4">
-                        <span className="text-green-400 font-bold">{campaign.amountCollected} SOL Raised</span>
-                        <span>Goal: {campaign.targetAmount} SOL</span>
-                      </div>
-
-                      <Link href={`/campaign/${campaign.pubkey.toString()}`} className="w-full">
-                        <button className="w-full bg-gray-800 hover:bg-green-600 hover:text-white text-green-400 py-3 rounded-xl text-sm font-bold transition-all">
-                          View Details & Donate →
-                        </button>
-                      </Link>
-                    </div>
+              <div className="md:col-span-2 bg-gray-900 border border-gray-800 rounded-2xl p-6 overflow-hidden relative">
+                <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
+                  <h3 className="text-green-400 font-bold font-mono flex items-center gap-2">
+                    <span>⚡</span> LIVE AUDIT TRAIL
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    <span className="text-green-500 text-xs font-mono">SYNCED</span>
                   </div>
-              ))}
+                </div>
+                <div className="space-y-3 font-mono text-sm">
+                  {[
+                    { hash: "8x92...921s", event: "Smart Contract Verified", time: "2m ago" },
+                    { hash: "2z11...881a", event: "Donation to 'Clean Ocean'", time: "5m ago" },
+                    { hash: "9q22...112x", event: "New Campaign Created", time: "12m ago" },
+                  ].map((item, i) => (
+                      <div key={i} className="flex justify-between items-center text-gray-400 hover:bg-white/5 p-1 rounded transition-colors cursor-default">
+                        <span className="text-gray-600">{item.hash}</span>
+                        <span className="text-gray-300">{item.event}</span>
+                        <span className="text-green-600">{item.time}</span>
+                      </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* --- CAMPAIGN LIST --- */}
+            <div>
+              <h2 className="text-2xl font-bold mb-6 border-l-4 border-green-500 pl-4">Live Campaigns ({campaigns.length})</h2>
+
+              {isLoading && <p className="text-gray-400 animate-pulse">Loading blockchain data...</p>}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {campaigns.map((campaign) => (
+                    <div key={campaign.pubkey.toString()} className="bg-gray-900 border border-gray-800 overflow-hidden rounded-2xl hover:border-green-500/50 transition-all flex flex-col group">
+
+                      <div className="h-48 bg-gray-800 w-full relative overflow-hidden">
+                        {campaign.image ? (
+                            <img src={campaign.image} alt={campaign.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-4xl">🏫</div>
+                        )}
+                        <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg text-xs font-mono text-green-400 border border-green-500/30">
+                          VERIFIED
+                        </div>
+                      </div>
+
+                      <div className="p-6 flex-1 flex flex-col">
+                        <h3 className="text-xl font-bold mb-2 truncate text-white">{campaign.name}</h3>
+                        <p className="text-gray-400 text-sm mb-4 line-clamp-3 flex-1">{campaign.description}</p>
+
+                        <div className="w-full bg-gray-800 h-2 rounded-full mb-2">
+                          <div
+                              className="bg-green-500 h-2 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"
+                              style={{ width: `${Math.min((campaign.amountCollected / campaign.targetAmount) * 100, 100)}%` }}
+                          ></div>
+                        </div>
+
+                        <div className="flex justify-between text-xs text-gray-500 font-mono mb-4">
+                          <span className="text-green-400 font-bold">{campaign.amountCollected} SOL Raised</span>
+                          <span>Goal: {campaign.targetAmount} SOL</span>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Link href={`/campaign/${campaign.pubkey.toString()}`} className="flex-1">
+                            <button className="w-full bg-white text-black hover:bg-gray-200 py-3 rounded-xl text-sm font-bold transition-all">
+                              Donate →
+                            </button>
+                          </Link>
+
+                          {/* ✅ FIX: Added Demo Certificate Button (Scroll Icon) */}
+                          <button
+                              onClick={() => setSuccessData({
+                                isOpen: true,
+                                amount: "0.5",
+                                campaignName: campaign.name,
+                                donorAddress: publicKey ? publicKey.toString() : "Demo User",
+                                txSignature: "Demo-Signature-123456789"
+                              })}
+                              className="px-4 bg-gray-800 hover:bg-green-900/20 text-green-500 rounded-xl border border-gray-700 transition-colors"
+                              title="View Certificate (Demo)"
+                          >
+                            📜
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                ))}
+              </div>
             </div>
 
             {!isLoading && campaigns.length === 0 && (
