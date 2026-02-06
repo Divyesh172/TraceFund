@@ -7,20 +7,19 @@ import { Program, AnchorProvider } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import Navbar from "./components/Navbar";
 import CreateCampaignModal from "./components/CreateCampaignModal";
-import DonationSuccessModal from "./components/DonationSuccessModal"; //
+import DonationSuccessModal from "./components/DonationSuccessModal"; // Imported
 import idl from "./utils/idl.json";
 
-// Force TypeScript to recognize the IDL
 const idl_object = JSON.parse(JSON.stringify(idl));
 
 export default function Home() {
   const { connection } = useConnection();
-  const { publicKey } = useWallet(); // Fixed: Ensure publicKey is available
+  const { publicKey } = useWallet();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // ✅ FIX: State to manage the Certificate Modal
+  // State for the Certificate Modal
   const [successData, setSuccessData] = useState({
     isOpen: false,
     amount: "0",
@@ -65,13 +64,12 @@ export default function Home() {
       <main className="min-h-screen bg-black text-white font-sans">
         <Navbar />
 
-        {/* --- MODALS --- */}
         <CreateCampaignModal
             isOpen={isModalOpen}
             onClose={() => { setIsModalOpen(false); getCampaigns(); }}
         />
 
-        {/* ✅ FIX: Render the Certificate Modal */}
+        {/* ✅ THIS WAS MISSING. The Modal will now appear. */}
         <DonationSuccessModal
             isOpen={successData.isOpen}
             onClose={() => setSuccessData({ ...successData, isOpen: false })}
@@ -106,44 +104,7 @@ export default function Home() {
 
           <div className="w-full max-w-6xl space-y-16">
 
-            {/* --- NEW SECTION: AUDIT LOGS --- */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col justify-center">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-green-900/30 rounded-lg text-green-500">💰</div>
-                  <h3 className="text-gray-400 text-sm font-mono">TOTAL VOLUME</h3>
-                </div>
-                <p className="text-4xl font-bold text-white">1,240 <span className="text-green-500">SOL</span></p>
-                <p className="text-xs text-gray-500 mt-2">Verified on Devnet</p>
-              </div>
-
-              <div className="md:col-span-2 bg-gray-900 border border-gray-800 rounded-2xl p-6 overflow-hidden relative">
-                <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
-                  <h3 className="text-green-400 font-bold font-mono flex items-center gap-2">
-                    <span>⚡</span> LIVE AUDIT TRAIL
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    <span className="text-green-500 text-xs font-mono">SYNCED</span>
-                  </div>
-                </div>
-                <div className="space-y-3 font-mono text-sm">
-                  {[
-                    { hash: "8x92...921s", event: "Smart Contract Verified", time: "2m ago" },
-                    { hash: "2z11...881a", event: "Donation to 'Clean Ocean'", time: "5m ago" },
-                    { hash: "9q22...112x", event: "New Campaign Created", time: "12m ago" },
-                  ].map((item, i) => (
-                      <div key={i} className="flex justify-between items-center text-gray-400 hover:bg-white/5 p-1 rounded transition-colors cursor-default">
-                        <span className="text-gray-600">{item.hash}</span>
-                        <span className="text-gray-300">{item.event}</span>
-                        <span className="text-green-600">{item.time}</span>
-                      </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* --- CAMPAIGN LIST --- */}
+            {/* Live Campaigns */}
             <div>
               <h2 className="text-2xl font-bold mb-6 border-l-4 border-green-500 pl-4">Live Campaigns ({campaigns.length})</h2>
 
@@ -187,7 +148,6 @@ export default function Home() {
                             </button>
                           </Link>
 
-                          {/* ✅ FIX: Added Demo Certificate Button (Scroll Icon) */}
                           <button
                               onClick={() => setSuccessData({
                                 isOpen: true,

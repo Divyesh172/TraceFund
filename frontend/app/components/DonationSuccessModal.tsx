@@ -5,15 +5,19 @@ import { useEffect, useRef } from "react";
 interface DonationSuccessModalProps {
     isOpen: boolean;
     onClose: () => void;
-    amount: number;
+    amount: string | number; // FIX: Accept both String and Number
     campaignName: string;
+    donorAddress?: string;   // FIX: Added optional prop
+    txSignature?: string;    // FIX: Added optional prop
 }
 
 export default function DonationSuccessModal({
                                                  isOpen,
                                                  onClose,
                                                  amount,
-                                                 campaignName
+                                                 campaignName,
+                                                 donorAddress,
+                                                 txSignature
                                              }: DonationSuccessModalProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -64,7 +68,7 @@ export default function DonationSuccessModal({
             // Details
             ctx.font = 'italic 28px serif';
             ctx.fillStyle = '#9ca3af';
-            ctx.fillText(`Presented for supporting`, canvas.width / 2, 230);
+            ctx.fillText(`Presented to ${donorAddress ? donorAddress.slice(0, 6) + '...' : 'Donor'}`, canvas.width / 2, 230);
 
             ctx.font = 'bold 32px sans-serif';
             ctx.fillStyle = '#ffffff';
@@ -81,7 +85,7 @@ export default function DonationSuccessModal({
             const date = new Date().toLocaleDateString();
             ctx.fillText(`Verified on Solana • ${date}`, canvas.width / 2, 420);
         }
-    }, [isOpen, amount, campaignName]);
+    }, [isOpen, amount, campaignName, donorAddress]);
 
     const downloadCertificate = () => {
         if (!canvasRef.current) return;
@@ -91,20 +95,16 @@ export default function DonationSuccessModal({
         link.click();
     };
 
-    // If not open, return nothing (Standard React pattern)
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Dark Overlay */}
             <div
                 className="fixed inset-0 bg-black/90 backdrop-blur-sm"
                 onClick={onClose}
             />
 
-            {/* Modal Content */}
             <div className="relative w-full max-w-xl rounded-2xl bg-black border border-green-500/30 p-6 shadow-2xl shadow-green-900/20 animate-in fade-in zoom-in duration-200">
-
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold text-white">
                         🎉 Contribution Verified
