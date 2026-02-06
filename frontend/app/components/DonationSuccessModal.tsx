@@ -2,13 +2,14 @@
 
 import { useEffect, useRef } from "react";
 
+// ✅ FIX: Updated interface to accept the data from page.tsx
 interface DonationSuccessModalProps {
     isOpen: boolean;
     onClose: () => void;
-    amount: string | number; // FIX: Accept both String and Number
+    amount: string | number; // Accepts both "0.5" and 0.5
     campaignName: string;
-    donorAddress?: string;   // FIX: Added optional prop
-    txSignature?: string;    // FIX: Added optional prop
+    donorAddress?: string;   // Optional (added ?)
+    txSignature?: string;    // Optional (added ?)
 }
 
 export default function DonationSuccessModal({
@@ -27,7 +28,7 @@ export default function DonationSuccessModal({
             const ctx = canvas.getContext("2d");
             if (!ctx) return;
 
-            // 1. Background
+            // 1. Background (Dark)
             ctx.fillStyle = '#111827';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -68,7 +69,9 @@ export default function DonationSuccessModal({
             // Details
             ctx.font = 'italic 28px serif';
             ctx.fillStyle = '#9ca3af';
-            ctx.fillText(`Presented to ${donorAddress ? donorAddress.slice(0, 6) + '...' : 'Donor'}`, canvas.width / 2, 230);
+            // Handle potentially undefined donorAddress
+            const safeAddress = donorAddress ? (donorAddress.length > 10 ? donorAddress.slice(0, 6) + '...' : donorAddress) : 'Donor';
+            ctx.fillText(`Presented to ${safeAddress}`, canvas.width / 2, 230);
 
             ctx.font = 'bold 32px sans-serif';
             ctx.fillStyle = '#ffffff';
