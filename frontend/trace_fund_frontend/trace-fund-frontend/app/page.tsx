@@ -4,6 +4,7 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState } from "react";
 import { getAllCampaigns, createCampaign, donate } from "./utils/program";
 import toast from "react-hot-toast";
+import CertificateModal from "./components/CertificateModal";
 
 // --- MOCK DATA ---
 const MOCK_CAMPAIGNS = [
@@ -39,6 +40,10 @@ export default function Home() {
   const [campaigns, setCampaigns] = useState<any[]>(MOCK_CAMPAIGNS);
   const [showModal, setShowModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // --- NEW: Certificate State ---
+  const [showCertificate, setShowCertificate] = useState(false);
+  const [lastDonation, setLastDonation] = useState({ amount: 0, campaignName: "" });
 
   useEffect(() => {
     if (wallet.publicKey) {
@@ -80,7 +85,8 @@ export default function Home() {
     }
   };
 
-  const handleDonate = async (pubkey: string) => {
+  // --- UPDATED: Handle Donate with Certificate Trigger ---
+  const handleDonate = async (pubkey: string, campaignName: string) => {
     if (!wallet.publicKey) {
       toast.error("Please connect your wallet!");
       return;
@@ -89,8 +95,17 @@ export default function Home() {
     try {
       await donate(connection, wallet, pubkey, 0.1);
       toast.success("Donation Confirmed on Chain!");
+      
+      // Trigger Certificate on Success
+      setLastDonation({ amount: 0.1, campaignName: campaignName });
+      setShowCertificate(true);
+
     } catch (err) {
       toast.success("Donated 0.1 SOL! (Demo Mode)");
+      
+      // Trigger Certificate on Demo Fallback
+      setLastDonation({ amount: 0.1, campaignName: campaignName });
+      setShowCertificate(true);
     }
   };
 
@@ -278,7 +293,7 @@ export default function Home() {
                       </a>
 
                       <button
-                          onClick={() => handleDonate(c.pubkey)}
+                          onClick={() => handleDonate(c.pubkey, c.name)} // Pass campaign name here
                           className="w-full bg-neutral-800 hover:bg-purple-600 hover:text-white py-3 rounded-xl font-semibold transition-all duration-300 border border-white/5"
                       >
                         Donate 0.1 SOL
@@ -290,7 +305,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* --- MODAL --- */}
+        {/* --- CAMPAIGN MODAL --- */}
         {showModal && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
               <form onSubmit={handleCreate} className="bg-neutral-900 p-8 rounded-3xl w-full max-w-md border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-200">
@@ -311,6 +326,16 @@ export default function Home() {
                 </div>
               </form>
             </div>
+        )}
+
+        {/* --- NEW: CERTIFICATE MODAL --- */}
+        {showCertificate && (
+            <CertificateModal
+                donorName={wallet.publicKey?.toString().slice(0, 6) + "..." || "Anonymous"}
+                amount={lastDonation.amount}
+                campaignName={lastDonation.campaignName}
+                onClose={() => setShowCertificate(false)}
+            />
         )}
       </div>
   );
