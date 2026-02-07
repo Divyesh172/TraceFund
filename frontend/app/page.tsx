@@ -7,11 +7,18 @@ import { Program, AnchorProvider } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import Navbar from "./components/Navbar";
 import CreateCampaignModal from "./components/CreateCampaignModal";
-import DonationSuccessModal from "./components/DonationSuccessModal"; // Imported
+import DonationSuccessModal from "./components/DonationSuccessModal";
 import idl from "./utils/idl.json";
 
-// Force TypeScript to recognize the IDL
 const idl_object = JSON.parse(JSON.stringify(idl));
+
+// --- AUDIT LOG INTERFACE ---
+interface AuditLog {
+  hash: string;
+  event: string;
+  time: string;
+  status: "verified" | "pending";
+}
 
 export default function Home() {
   const { connection } = useConnection();
@@ -19,6 +26,9 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // 1. NEW: Persistent Audit Logs State
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
   // State for the Certificate Modal
   const [successData, setSuccessData] = useState({
@@ -28,6 +38,36 @@ export default function Home() {
     donorAddress: "",
     txSignature: ""
   });
+
+  // 2. NEW: Load Logs from LocalStorage on Startup
+  useEffect(() => {
+    const savedLogs = localStorage.getItem("tracefund_logs");
+    if (savedLogs) {
+      setAuditLogs(JSON.parse(savedLogs));
+    } else {
+      // Seed with fake data if empty (First time user)
+      const initialLogs: AuditLog[] = [
+        { hash: "8x92...921s", event: "Smart Contract Verified", time: "2m ago", status: "verified" },
+        { hash: "2z11...881a", event: "Donation to 'Clean Ocean'", time: "5m ago", status: "verified" },
+        { hash: "9q22...112x", event: "New Campaign Created", time: "12m ago", status: "verified" },
+      ];
+      setAuditLogs(initialLogs);
+      localStorage.setItem("tracefund_logs", JSON.stringify(initialLogs));
+    }
+  }, []);
+
+  // 3. NEW: Helper to Add a Log (and save it!)
+  const addAuditLog = (event: string, hash: string) => {
+    const newLog: AuditLog = {
+      hash: hash,
+      event: event,
+      time: "Just now",
+      status: "verified"
+    };
+    const updatedLogs = [newLog, ...auditLogs].slice(0, 5); // Keep last 5 only
+    setAuditLogs(updatedLogs);
+    localStorage.setItem("tracefund_logs", JSON.stringify(updatedLogs));
+  };
 
   const getCampaigns = async () => {
     setIsLoading(true);
@@ -61,6 +101,21 @@ export default function Home() {
     getCampaigns();
   }, [connection, publicKey]);
 
+  // Handle Demo Donation
+  const handleDemoDonate = (campaignName: string) => {
+    // 1. Open Certificate
+    setSuccessData({
+      isOpen: true,
+      amount: "0.5",
+      campaignName: campaignName,
+      donorAddress: publicKey ? publicKey.toString() : "Demo User",
+      txSignature: "Demo-Sig-123"
+    });
+
+    // 2. Add to Audit Log (Simulated persistence)
+    addAuditLog(`Donation to '${campaignName}'`, `tx-${Math.floor(Math.random() * 10000)}...sol`);
+  };
+
   return (
       <main className="min-h-screen bg-black text-white font-sans">
         <Navbar />
@@ -68,10 +123,13 @@ export default function Home() {
         {/* --- MODALS --- */}
         <CreateCampaignModal
             isOpen={isModalOpen}
-            onClose={() => { setIsModalOpen(false); getCampaigns(); }}
+            onClose={() => {
+              setIsModalOpen(false);
+              getCampaigns();
+              addAuditLog("New Campaign Created", `tx-${Math.floor(Math.random() * 10000)}...init`);
+            }}
         />
 
-        {/* Certificate Modal */}
         <DonationSuccessModal
             isOpen={successData.isOpen}
             onClose={() => setSuccessData({ ...successData, isOpen: false })}
@@ -106,7 +164,7 @@ export default function Home() {
 
           <div className="w-full max-w-6xl space-y-16">
 
-            {/* --- AUDIT LOGS SECTION (THIS WAS MISSING) --- */}
+            {/* --- PERSISTENT AUDIT LOGS --- */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col justify-center">
                 <div className="flex items-center gap-3 mb-2">
@@ -128,12 +186,8 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="space-y-3 font-mono text-sm">
-                  {[
-                    { hash: "8x92...921s", event: "Smart Contract Verified", time: "2m ago" },
-                    { hash: "2z11...881a", event: "Donation to 'Clean Ocean'", time: "5m ago" },
-                    { hash: "9q22...112x", event: "New Campaign Created", time: "12m ago" },
-                  ].map((item, i) => (
-                      <div key={i} className="flex justify-between items-center text-gray-400 hover:bg-white/5 p-1 rounded transition-colors cursor-default">
+                  {auditLogs.map((item, i) => (
+                      <div key={i} className="flex justify-between items-center text-gray-400 hover:bg-white/5 p-1 rounded transition-colors cursor-default animate-in slide-in-from-right duration-300">
                         <span className="text-gray-600">{item.hash}</span>
                         <span className="text-gray-300">{item.event}</span>
                         <span className="text-green-600">{item.time}</span>
@@ -187,14 +241,9 @@ export default function Home() {
                             </button>
                           </Link>
 
+                          {/* TRIGGER DEMO + ADD LOG */}
                           <button
-                              onClick={() => setSuccessData({
-                                isOpen: true,
-                                amount: "0.5",
-                                campaignName: campaign.name,
-                                donorAddress: publicKey ? publicKey.toString() : "Demo User",
-                                txSignature: "Demo-Signature-123456789"
-                              })}
+                              onClick={() => handleDemoDonate(campaign.name)}
                               className="px-4 bg-gray-800 hover:bg-green-900/20 text-green-500 rounded-xl border border-gray-700 transition-colors"
                               title="View Certificate (Demo)"
                           >
