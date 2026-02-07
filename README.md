@@ -1,6 +1,6 @@
 # 🔍 TraceFund: Radical Transparency in Crowdfunding
 
-> **"Donations with Zero Secrets."**
+> *"Donations with Zero Secrets."*
 
 TraceFund is a decentralized crowdfunding platform built on the **Solana Blockchain**. Unlike traditional platforms (GoFundMe, Kickstarter) where money disappears into a black box, TraceFund tracks every single lamport from the donor's wallet to the final withdrawal.
 
