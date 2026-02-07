@@ -27,7 +27,10 @@ export default function Home() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 1. NEW: Persistent Audit Logs State
+  // 1. NEW: State for Total Volume
+  const [totalVolume, setTotalVolume] = useState(0);
+
+  // Persistent Audit Logs State
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
   // State for the Certificate Modal
@@ -39,13 +42,12 @@ export default function Home() {
     txSignature: ""
   });
 
-  // 2. NEW: Load Logs from LocalStorage on Startup
+  // Load Logs from LocalStorage on Startup
   useEffect(() => {
     const savedLogs = localStorage.getItem("tracefund_logs");
     if (savedLogs) {
       setAuditLogs(JSON.parse(savedLogs));
     } else {
-      // Seed with fake data if empty (First time user)
       const initialLogs: AuditLog[] = [
         { hash: "8x92...921s", event: "Smart Contract Verified", time: "2m ago", status: "verified" },
         { hash: "2z11...881a", event: "Donation to 'Clean Ocean'", time: "5m ago", status: "verified" },
@@ -56,7 +58,6 @@ export default function Home() {
     }
   }, []);
 
-  // 3. NEW: Helper to Add a Log (and save it!)
   const addAuditLog = (event: string, hash: string) => {
     const newLog: AuditLog = {
       hash: hash,
@@ -64,7 +65,7 @@ export default function Home() {
       time: "Just now",
       status: "verified"
     };
-    const updatedLogs = [newLog, ...auditLogs].slice(0, 5); // Keep last 5 only
+    const updatedLogs = [newLog, ...auditLogs].slice(0, 5);
     setAuditLogs(updatedLogs);
     localStorage.setItem("tracefund_logs", JSON.stringify(updatedLogs));
   };
@@ -89,6 +90,10 @@ export default function Home() {
         admin: account.account.admin.toString(),
       }));
 
+      // 2. NEW: Calculate Real Total Volume
+      const total = cleanedData.reduce((acc: number, curr: any) => acc + curr.amountCollected, 0);
+      setTotalVolume(total);
+
       setCampaigns(cleanedData);
     } catch (error) {
       console.error("Error fetching campaigns:", error);
@@ -101,9 +106,7 @@ export default function Home() {
     getCampaigns();
   }, [connection, publicKey]);
 
-  // Handle Demo Donation
   const handleDemoDonate = (campaignName: string) => {
-    // 1. Open Certificate
     setSuccessData({
       isOpen: true,
       amount: "0.5",
@@ -111,8 +114,6 @@ export default function Home() {
       donorAddress: publicKey ? publicKey.toString() : "Demo User",
       txSignature: "Demo-Sig-123"
     });
-
-    // 2. Add to Audit Log (Simulated persistence)
     addAuditLog(`Donation to '${campaignName}'`, `tx-${Math.floor(Math.random() * 10000)}...sol`);
   };
 
@@ -120,7 +121,6 @@ export default function Home() {
       <main className="min-h-screen bg-black text-white font-sans">
         <Navbar />
 
-        {/* --- MODALS --- */}
         <CreateCampaignModal
             isOpen={isModalOpen}
             onClose={() => {
@@ -164,14 +164,18 @@ export default function Home() {
 
           <div className="w-full max-w-6xl space-y-16">
 
-            {/* --- PERSISTENT AUDIT LOGS --- */}
+            {/* --- STATS & AUDIT LOGS --- */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+              {/* 3. NEW: Real Total Volume Card */}
               <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col justify-center">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-green-900/30 rounded-lg text-green-500">💰</div>
                   <h3 className="text-gray-400 text-sm font-mono">TOTAL VOLUME</h3>
                 </div>
-                <p className="text-4xl font-bold text-white">1,240 <span className="text-green-500">SOL</span></p>
+                <p className="text-4xl font-bold text-white">
+                  {totalVolume.toLocaleString()} <span className="text-green-500">SOL</span>
+                </p>
                 <p className="text-xs text-gray-500 mt-2">Verified on Devnet</p>
               </div>
 
@@ -241,7 +245,6 @@ export default function Home() {
                             </button>
                           </Link>
 
-                          {/* TRIGGER DEMO + ADD LOG */}
                           <button
                               onClick={() => handleDemoDonate(campaign.name)}
                               className="px-4 bg-gray-800 hover:bg-green-900/20 text-green-500 rounded-xl border border-gray-700 transition-colors"
