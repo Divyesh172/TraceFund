@@ -4,8 +4,6 @@
 
 TraceFund is a decentralized crowdfunding platform built on the **Solana Blockchain**. Unlike traditional platforms (GoFundMe, Kickstarter) where money disappears into a black box, TraceFund tracks every single lamport from the donor's wallet to the final withdrawal.
 
-**Built for the [Name of Hackathon] 2025.**
-
 ---
 
 ## 🛑 The Problem
@@ -22,30 +20,39 @@ Traditional charity has a **trust crisis**.
 
 ---
 
-## 🌟 Key Features
+## 🌟 Key Features (Live on Devnet)
 
-### 1. 🛡️ On-Chain Audit Logs
-A real-time, tamper-proof ledger displayed directly on the campaign page. Donors can see exactly when funds were withdrawn and why.
+### 1. ⚡ Live Audit Trail
+A persistent, real-time ledger that syncs across the platform. Every action—from campaign creation to donation—is logged and stored locally, ensuring donors never lose track of the platform's activity.
 
-### 2. 🏆 Top Donors Leaderboard (Gamification)
-We gamify philanthropy. A live leaderboard tracks the most generous contributors, creating social proof and encouraging larger donations.
+### 2. 📜 Proof of Impact Certificates
+Donors receive an instant, generated "Certificate of Impact" upon contribution. This isn't just a receipt; it's a shareable digital asset that proves their on-chain philanthropy.
 
-### 3. 📜 Instant Impact Certificates
-Upon donating, users receive a "Certificate of Impact" modal proving their contribution, designed for instant social sharing (Twitter/X).
+### 3. 💧 Built-in Devnet Faucet
+We solved the "Empty Wallet" problem. Users can fund their Devnet wallets directly from our Navbar with a single click, removing barriers for testing and demos.
 
-### 4. ⚡ Powered by Solana
-* **Near-Zero Fees:** Donating $10 costs fractions of a cent.
-* **Instant Finality:** Transactions confirm in <400ms.
+### 4. 🛡️ Trustless Smart Contracts
+* **Solvency Checks:** The contract prevents over-withdrawal.
+* **Admin Locks:** Only the campaign creator can access funds.
+* **Zero Secrets:** All data is fetched directly from the Solana blockchain (PDA accounts).
 
 ---
 
 ## 🛠️ Tech Stack
 
 * **Blockchain:** Solana (Devnet)
-* **Smart Contract Framework:** Anchor (Rust)
-* **Frontend:** Next.js 14 (App Router), React, TypeScript
-* **Styling:** Tailwind CSS
-* **Wallet Connection:** Solana Wallet Adapter (Phantom support)
+* **Smart Contract:** Anchor Framework 0.30+ (Rust)
+* **Frontend:** Next.js 16 (App Router), React 19, TypeScript
+* **Styling:** Tailwind CSS (Custom "Matrix Green" Theme)
+* **Wallet:** Solana Wallet Adapter (Phantom, Solflare)
+* **AI Tooling:** Noah AI (Generated comprehensive test suites for contract verification)
+
+---
+
+## 🤖 AI Implementation
+We utilized **Noah AI** to enhance the reliability of our smart contract.
+* **Automated Testing:** Noah AI generated the TypeScript test suite (`tests/trace_fund.ts`) used to verify edge cases in our `initialize`, `donate`, and `withdraw` instructions.
+* **Benefit:** This allowed us to focus on frontend UX while ensuring backend security.
 
 ---
 
