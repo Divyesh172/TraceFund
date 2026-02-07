@@ -10,9 +10,10 @@ import CreateCampaignModal from "./components/CreateCampaignModal";
 import DonationSuccessModal from "./components/DonationSuccessModal";
 import idl from "./utils/idl.json";
 
+// Force TypeScript to recognize the IDL
 const idl_object = JSON.parse(JSON.stringify(idl));
 
-// --- AUDIT LOG INTERFACE ---
+// --- INTERFACES ---
 interface AuditLog {
   hash: string;
   event: string;
@@ -23,17 +24,15 @@ interface AuditLog {
 export default function Home() {
   const { connection } = useConnection();
   const { publicKey } = useWallet();
+
+  // --- STATE ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  // 1. NEW: State for Total Volume
   const [totalVolume, setTotalVolume] = useState(0);
-
-  // Persistent Audit Logs State
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
-  // State for the Certificate Modal
+  // Certificate Modal State
   const [successData, setSuccessData] = useState({
     isOpen: false,
     amount: "0",
@@ -42,12 +41,17 @@ export default function Home() {
     txSignature: ""
   });
 
-  // Load Logs from LocalStorage on Startup
-  useEffect(() => {
+  // --- LOGIC: AUDIT LOGS ---
+  const loadLogs = () => {
     const savedLogs = localStorage.getItem("tracefund_logs");
     if (savedLogs) {
-      setAuditLogs(JSON.parse(savedLogs));
+      try {
+        setAuditLogs(JSON.parse(savedLogs));
+      } catch (e) {
+        console.error("Failed to parse logs", e);
+      }
     } else {
+      // Seed with fake data if empty (First time user experience)
       const initialLogs: AuditLog[] = [
         { hash: "8x92...921s", event: "Smart Contract Verified", time: "2m ago", status: "verified" },
         { hash: "2z11...881a", event: "Donation to 'Clean Ocean'", time: "5m ago", status: "verified" },
@@ -56,6 +60,20 @@ export default function Home() {
       setAuditLogs(initialLogs);
       localStorage.setItem("tracefund_logs", JSON.stringify(initialLogs));
     }
+  };
+
+  // Sync logs on mount AND when window gets focus (returning from Campaign page)
+  useEffect(() => {
+    loadLogs();
+
+    const handleStorageChange = () => loadLogs();
+    window.addEventListener("focus", handleStorageChange);
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("focus", handleStorageChange);
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
 
   const addAuditLog = (event: string, hash: string) => {
@@ -65,11 +83,15 @@ export default function Home() {
       time: "Just now",
       status: "verified"
     };
-    const updatedLogs = [newLog, ...auditLogs].slice(0, 5);
+    const savedLogs = localStorage.getItem("tracefund_logs");
+    let logs = savedLogs ? JSON.parse(savedLogs) : [];
+    const updatedLogs = [newLog, ...logs].slice(0, 10); // Keep last 10
+
     setAuditLogs(updatedLogs);
     localStorage.setItem("tracefund_logs", JSON.stringify(updatedLogs));
   };
 
+  // --- LOGIC: FETCH CAMPAIGNS ---
   const getCampaigns = async () => {
     setIsLoading(true);
     try {
@@ -90,7 +112,7 @@ export default function Home() {
         admin: account.account.admin.toString(),
       }));
 
-      // 2. NEW: Calculate Real Total Volume
+      // Calculate Real Total Volume
       const total = cleanedData.reduce((acc: number, curr: any) => acc + curr.amountCollected, 0);
       setTotalVolume(total);
 
@@ -106,6 +128,7 @@ export default function Home() {
     getCampaigns();
   }, [connection, publicKey]);
 
+  // Demo functionality for the "Certificate" button on cards
   const handleDemoDonate = (campaignName: string) => {
     setSuccessData({
       isOpen: true,
@@ -117,10 +140,12 @@ export default function Home() {
     addAuditLog(`Donation to '${campaignName}'`, `tx-${Math.floor(Math.random() * 10000)}...sol`);
   };
 
+  // --- RENDER ---
   return (
       <main className="min-h-screen bg-black text-white font-sans">
         <Navbar />
 
+        {/* Modals */}
         <CreateCampaignModal
             isOpen={isModalOpen}
             onClose={() => {
@@ -147,6 +172,7 @@ export default function Home() {
             TraceFund uses the Solana blockchain to track every single donation from your wallet to the final expense.
           </p>
 
+          {/* Action Buttons */}
           <div className="flex gap-4 mb-16">
             <button
                 onClick={() => setIsModalOpen(true)}
@@ -164,10 +190,10 @@ export default function Home() {
 
           <div className="w-full max-w-6xl space-y-16">
 
-            {/* --- STATS & AUDIT LOGS --- */}
+            {/* --- SECTION: STATS & AUDIT LOGS --- */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-              {/* 3. NEW: Real Total Volume Card */}
+              {/* Real Total Volume Card */}
               <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col justify-center">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-green-900/30 rounded-lg text-green-500">💰</div>
@@ -179,6 +205,7 @@ export default function Home() {
                 <p className="text-xs text-gray-500 mt-2">Verified on Devnet</p>
               </div>
 
+              {/* Live Audit Log Card */}
               <div className="md:col-span-2 bg-gray-900 border border-gray-800 rounded-2xl p-6 overflow-hidden relative">
                 <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
                   <h3 className="text-green-400 font-bold font-mono flex items-center gap-2">
@@ -189,19 +216,24 @@ export default function Home() {
                     <span className="text-green-500 text-xs font-mono">SYNCED</span>
                   </div>
                 </div>
-                <div className="space-y-3 font-mono text-sm">
+                <div className="space-y-3 font-mono text-sm max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                   {auditLogs.map((item, i) => (
-                      <div key={i} className="flex justify-between items-center text-gray-400 hover:bg-white/5 p-1 rounded transition-colors cursor-default animate-in slide-in-from-right duration-300">
-                        <span className="text-gray-600">{item.hash}</span>
-                        <span className="text-gray-300">{item.event}</span>
-                        <span className="text-green-600">{item.time}</span>
+                      <div key={i} className="flex justify-between items-center text-gray-400 hover:bg-white/5 p-2 rounded transition-colors cursor-default animate-in slide-in-from-right duration-300">
+                        <div className="flex items-center gap-3">
+                          <span className="text-green-500/50 text-xs">●</span>
+                          <span className="text-gray-300 font-bold">{item.event}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-gray-600 text-xs hidden sm:block">{item.hash}</span>
+                          <span className="text-green-600 text-xs whitespace-nowrap">{item.time}</span>
+                        </div>
                       </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* --- LIVE CAMPAIGNS --- */}
+            {/* --- SECTION: LIVE CAMPAIGNS --- */}
             <div>
               <h2 className="text-2xl font-bold mb-6 border-l-4 border-green-500 pl-4">Live Campaigns ({campaigns.length})</h2>
 
@@ -211,6 +243,7 @@ export default function Home() {
                 {campaigns.map((campaign) => (
                     <div key={campaign.pubkey.toString()} className="bg-gray-900 border border-gray-800 overflow-hidden rounded-2xl hover:border-green-500/50 transition-all flex flex-col group">
 
+                      {/* Image */}
                       <div className="h-48 bg-gray-800 w-full relative overflow-hidden">
                         {campaign.image ? (
                             <img src={campaign.image} alt={campaign.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -222,10 +255,12 @@ export default function Home() {
                         </div>
                       </div>
 
+                      {/* Content */}
                       <div className="p-6 flex-1 flex flex-col">
                         <h3 className="text-xl font-bold mb-2 truncate text-white">{campaign.name}</h3>
                         <p className="text-gray-400 text-sm mb-4 line-clamp-3 flex-1">{campaign.description}</p>
 
+                        {/* Progress Bar */}
                         <div className="w-full bg-gray-800 h-2 rounded-full mb-2">
                           <div
                               className="bg-green-500 h-2 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"
@@ -238,6 +273,7 @@ export default function Home() {
                           <span>Goal: {campaign.targetAmount} SOL</span>
                         </div>
 
+                        {/* Buttons */}
                         <div className="flex gap-2">
                           <Link href={`/campaign/${campaign.pubkey.toString()}`} className="flex-1">
                             <button className="w-full bg-white text-black hover:bg-gray-200 py-3 rounded-xl text-sm font-bold transition-all">
@@ -259,6 +295,7 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Empty State */}
             {!isLoading && campaigns.length === 0 && (
                 <div className="text-center py-20 border border-dashed border-gray-800 rounded-3xl">
                   <p className="text-gray-500 text-xl mb-4">No campaigns found yet.</p>
