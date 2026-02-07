@@ -3,18 +3,19 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { Program, AnchorProvider, BN, web3 } from "@coral-xyz/anchor";
+import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import Navbar from "../../components/Navbar";
 import DonationSuccessModal from "../../components/DonationSuccessModal";
 import idl from "../../utils/idl.json";
 
+// Force TypeScript to recognize the IDL
 const idl_object = JSON.parse(JSON.stringify(idl));
 
 export default function CampaignDetails() {
     const { address } = useParams();
     const { connection } = useConnection();
-    const { publicKey, sendTransaction } = useWallet();
+    const { publicKey } = useWallet();
 
     const [campaign, setCampaign] = useState<any>(null);
     const [amount, setAmount] = useState("");
@@ -30,10 +31,11 @@ export default function CampaignDetails() {
     const getCampaign = async () => {
         if (!address) return;
         try {
-            // 1. Fetch Campaign Data
             const provider = new AnchorProvider(connection, window.solana, { preflightCommitment: "processed" });
             const program = new Program(idl_object, provider) as any;
-            const account: any = await program.account.campaign.fetch(new PublicKey(address));
+
+            // FIX 1: Cast address to string
+            const account: any = await program.account.campaign.fetch(new PublicKey(address as string));
 
             setCampaign({
                 pubkey: address,
@@ -53,7 +55,6 @@ export default function CampaignDetails() {
         getCampaign();
     }, [address, connection]);
 
-    // --- 🔥 THE FIX IS HERE ---
     const saveAuditLog = (event: string, hash: string) => {
         const newLog = {
             hash: hash,
@@ -62,30 +63,25 @@ export default function CampaignDetails() {
             status: "verified"
         };
 
-        // Get existing logs
         const savedLogs = localStorage.getItem("tracefund_logs");
         let logs = savedLogs ? JSON.parse(savedLogs) : [];
-
-        // Add new log to top
-        logs = [newLog, ...logs].slice(0, 10); // Keep last 10
-
-        // Save back
+        logs = [newLog, ...logs].slice(0, 10);
         localStorage.setItem("tracefund_logs", JSON.stringify(logs));
     };
 
     const donate = async () => {
-        if (!publicKey || !amount || !campaign) return;
+        // FIX 2: Added !address check
+        if (!publicKey || !amount || !campaign || !address) return;
         setIsLoading(true);
 
         try {
             const provider = new AnchorProvider(connection, window.solana, { preflightCommitment: "processed" });
             const program = new Program(idl_object, provider) as any;
 
-            // 1. Send Transaction
             const tx = await program.methods
                 .donate(new BN(parseFloat(amount) * 1_000_000_000))
                 .accounts({
-                    campaign: new PublicKey(address),
+                    campaign: new PublicKey(address as string), // FIX 3: Cast address to string
                     donor: publicKey,
                     systemProgram: SystemProgram.programId,
                 })
@@ -93,10 +89,8 @@ export default function CampaignDetails() {
 
             console.log("Donation successful:", tx);
 
-            // 2. Refresh Data
             await getCampaign();
 
-            // 3. Show Certificate
             setSuccessData({
                 isOpen: true,
                 amount: amount,
@@ -105,7 +99,6 @@ export default function CampaignDetails() {
                 txSignature: tx
             });
 
-            // 4. 🔥 SAVE TO AUDIT LOG (Bridge to Home Page)
             saveAuditLog(`Donation to '${campaign.name}'`, `${tx.slice(0, 8)}...`);
 
         } catch (error) {
@@ -133,7 +126,6 @@ export default function CampaignDetails() {
 
             <div className="max-w-4xl mx-auto pt-24 px-4">
 
-                {/* Header */}
                 <div className="bg-gray-900 rounded-3xl overflow-hidden border border-gray-800 shadow-2xl">
                     <div className="h-64 w-full relative">
                         <img src={campaign.image} alt={campaign.name} className="w-full h-full object-cover" />
@@ -153,7 +145,6 @@ export default function CampaignDetails() {
 
                     <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
 
-                        {/* Left: Stats & Input */}
                         <div className="md:col-span-2 space-y-8">
                             <div>
                                 <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase tracking-wide">About this Campaign</h3>
@@ -184,7 +175,6 @@ export default function CampaignDetails() {
                             </div>
                         </div>
 
-                        {/* Right: Progress Card */}
                         <div className="space-y-6">
                             <div className="bg-gray-800/50 p-6 rounded-2xl border border-gray-700">
                                 <div className="mb-4">
@@ -205,7 +195,6 @@ export default function CampaignDetails() {
                                 </div>
                             </div>
 
-                            {/* Admin Zone (Only shows if YOU are the owner) */}
                             {publicKey && publicKey.toString() === campaign.admin && (
                                 <div className="border border-red-900/50 bg-red-900/10 p-6 rounded-2xl">
                                     <h3 className="text-red-400 font-bold mb-2 flex items-center gap-2">
